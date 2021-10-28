@@ -1,0 +1,289 @@
+C51 COMPILER V9.01   MAIN                                                                  06/17/2020 12:32:42 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: D:\Keli\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /*
+   2          prj name: 简易交通灯设计
+   3          coding  : gbk
+   4          File    : mian.c
+   5          Author  : MrSkYe
+   6          Email   : skye231@foxmail.com
+   7          */
+   8          #include <reg51.h>
+   9          
+  10          sbit Red_nb=P2^6;                               //南北红灯标志
+  11          sbit Yellow_nb=P2^5;                    //南北黄灯标志
+  12          sbit Green_nb=P2^4;                     //南北绿灯标志
+  13          
+  14          sbit Red_dx=P2^3;                               //东西红灯标志
+  15          sbit Yellow_dx=P2^2;                    //东西黄灯标志
+  16          sbit Green_dx=P2^1;                             //东西绿灯标志
+  17          
+  18          bit dx_nb=0;                                    //东西南北控制位
+  19          bit Yellow_status=0;                    //黄灯闪烁标志位
+  20          
+  21          unsigned char  sec_dx;                          //东西方向时间存储变量
+  22          unsigned char  sec_nb;                          //南北方向时间存储变量
+  23          float  set_timedx=30;                           //东西方向的通行单次时间
+  24          float  set_timenb=30;                               //南北方向的通行单次时间
+  25          unsigned char  buf[4];                              //秒显示的变量
+  26          unsigned char data countt0;             //定时器0中断计数器
+  27          unsigned char data countt1;             //定时器1中断计数器
+  28          
+  29          unsigned char flag_option=0;            //功能选择位:1 紧急模式；2 夜间模式
+  30          
+  31          sbit  key_EP=P3^2;                              //紧急模式
+  32          unsigned char conut_ER;                 //紧急状态
+  33          
+  34          sbit  key_night=P3^3;                       //夜间模式
+  35          unsigned char flag_Night;                       //夜间状态
+  36          unsigned char conut_night;              //夜间模式
+  37          
+  38          unsigned char code led[11]={            //共阴极字型码
+  39              0x3f,  //--0
+  40              0x06,  //--1
+  41              0x5b,  //--2
+  42              0x4f,  //--3
+  43              0x66,  //--4
+  44              0x6d,  //--5
+  45              0x7d,  //--6
+  46              0x07,  //--7
+  47              0x7f,  //--8
+  48              0x6f,  //--9
+  49              0x00   //--NULL
+  50          };
+  51          
+  52          
+  53          
+  54          /*延时函数*/
+  55          void delay(int time)
+C51 COMPILER V9.01   MAIN                                                                  06/17/2020 12:32:42 PAGE 2   
+
+  56          {
+  57   1          unsigned int j,k;
+  58   1          for(j=0;j<time;j++)                 
+  59   1             for(k=0;k<124;k++);              
+  60   1      }
+  61          
+  62          /*显示函数*/
+  63          void display(void)
+  64          {
+  65   1          buf[0]=sec_nb/10;           //第1位 东西十位
+  66   1          buf[1]=sec_nb%10;           //第2位 东西个位
+  67   1          buf[2]=sec_dx/10;           //第3位 南北十位
+  68   1          buf[3]=sec_dx%10;           //第4位 南北个位
+  69   1          P1=0xfe;                    //LED1
+  70   1          P0=led[buf[0]];                 //东西十位
+  71   1          delay(1);
+  72   1          P1=0xfd;                    //LED2
+  73   1          P0=led[buf[1]];                 //东西个位
+  74   1          delay(1);                           
+  75   1          P1=0Xfb;                            //LED3
+  76   1          P0=led[buf[2]];                 //南北十位
+  77   1          delay(1);                           
+  78   1          P1=0Xf7;                            //LED4
+  79   1          P0=led[buf[3]];                 //南北个位
+  80   1          delay(1);                           
+  81   1      }
+  82          
+  83          /*功能函数*/
+  84          void function(void)
+  85          {
+  86   1          switch (flag_option)
+  87   1          {
+  88   2              case 1:
+  89   2              {
+  90   3                  conut_ER=1-conut_ER;
+  91   3                  if(conut_ER==1)
+  92   3                  {
+  93   4                      TR0=0;                                          //关交通灯定时器
+  94   4                      P2=0x00;                                        //关全部信号灯
+  95   4                      Red_dx=1;                   //全部置红灯
+  96   4                      Red_nb=1;
+  97   4                  }           
+  98   3                  if(conut_ER==0)
+  99   3                  {
+ 100   4                      TR0=1;                                          //开交通灯定时器
+ 101   4                      P2=0X00;                                        //关全部信号灯
+ 102   4                      Green_dx=1;                                     //东西绿灯亮
+ 103   4                      Red_nb=1;                                       //南北红灯亮
+ 104   4                      sec_dx=set_timedx;          //回到初值
+ 105   4                      sec_nb=sec_dx+5;
+ 106   4                  }   
+ 107   3                  flag_option=0;      
+ 108   3                  break;
+ 109   3              }
+ 110   2              case 2:
+ 111   2              {
+ 112   3                  conut_night=1-conut_night;
+ 113   3                  if(conut_night==1)
+ 114   3                  {
+ 115   4                      TR0=0;                                          //关交通灯定时器
+ 116   4                      P2=0x00;                    //关全部信号灯
+ 117   4                      flag_Night=1;               //打开夜间模式
+C51 COMPILER V9.01   MAIN                                                                  06/17/2020 12:32:42 PAGE 3   
+
+ 118   4                      sec_dx=00;                                      //四个方向的时间都为00
+ 119   4                      sec_nb=00;
+ 120   4                  }
+ 121   3                  if(conut_night==0)
+ 122   3                  {
+ 123   4                      TR0=1;                                          //开交通灯定时器
+ 124   4                      P2=0x00;                    //关全部信号灯
+ 125   4                      Green_dx=1;                                     //东西绿灯亮
+ 126   4                      Red_nb=1;                                       //南北红灯亮
+ 127   4                      flag_Night=0;               //打开夜间模式
+ 128   4                      sec_dx=set_timedx;          //回到初值
+ 129   4                      sec_nb=sec_dx+5;
+ 130   4                  }
+ 131   3                  flag_option=0;
+ 132   3                  break;
+ 133   3              }
+ 134   2              default:
+ 135   2                  break;
+ 136   2          }
+ 137   1      }
+ 138          
+ 139          /*处理整个交通灯计时*/
+ 140          void time0(void) interrupt 1 using 1    //定时中断子程序
+ 141          {
+ 142   1          TH0=0x4C;                                                   //重赋初值;11.0592m晶振50ms
+ 143   1          TL0=0X00;
+ 144   1          TR0=1;                                                              //开交通灯定时器
+ 145   1          countt0++;                                                  //计数器数加1（用于计算时间）
+ 146   1          if(countt0==20)                             //定时器中断次数=20时（即1秒时）
+ 147   1          {   
+ 148   2              countt0=0;                                              //清零计数器
+ 149   2              sec_dx--;                                               //东西时间减1
+ 150   2              sec_nb--;                                               //南北时间减1
+ 151   2              if(sec_nb==0&&sec_dx==5&&(Yellow_status==0))            //当南北倒计时到0时，重置5秒，用于黄灯闪烁时间
+ 152   2              {
+ 153   3                  sec_nb=5;
+ 154   3                  Yellow_status=1;
+ 155   3              }
+ 156   2              if(sec_dx==0&&sec_nb==5&&(Yellow_status==0))            //当东西倒计时到0时，重置5秒，用于黄灯闪烁时间
+ 157   2              {
+ 158   3                  sec_dx=5;
+ 159   3                  Yellow_status=1;                    //启动黄灯开始倒计时
+ 160   3              }
+ 161   2              if((sec_nb<=5)&&(dx_nb==0)&&(Yellow_status==1))                 //东西黄灯闪
+ 162   2              {
+ 163   3                  Green_dx=0;
+ 164   3                  Yellow_dx=~Yellow_dx;
+ 165   3              }
+ 166   2              if((sec_dx<=5)&&(dx_nb==1)&&(Yellow_status==1))                 //南北黄灯闪
+ 167   2              {
+ 168   3                  Green_nb=0;
+ 169   3                  Yellow_nb=~Yellow_nb;
+ 170   3              }
+ 171   2              if(dx_nb==0&&sec_nb==0&&sec_dx==0)                                  //东西通行：当黄灯时间、通行方向倒计时到0时
+ 172   2              {
+ 173   3                  P2=0x00;                                    //重置东西南背方向的红绿灯
+ 174   3                  Green_nb=1;                                 //南北绿灯亮
+ 175   3                  Red_dx=1;                                   //东西红灯亮
+ 176   3                  dx_nb=!dx_nb;                               //交换通行方向
+ 177   3                  Yellow_status=0;                    //关闭黄灯闪烁
+ 178   3                  sec_dx=set_timedx+5;                        //重赋东西方向的起始值
+ 179   3                  sec_nb=set_timenb;          //重赋南北方向的起始值
+C51 COMPILER V9.01   MAIN                                                                  06/17/2020 12:32:42 PAGE 4   
+
+ 180   3              }
+ 181   2              if(dx_nb==1&&sec_dx==0&&sec_nb==0)                                  //南北通行：当黄灯时间、通行方向倒计时到0时
+ 182   2              {
+ 183   3                  P2=0X00;                                    //重置东西南北的红绿灯状态
+ 184   3                  Green_dx=1;                                 //东西绿灯亮
+ 185   3                  Red_nb=1;                                   //南北红灯亮
+ 186   3                  dx_nb=!dx_nb;                               //交换通行方向
+ 187   3                  Yellow_status=0;                                    //关闭黄灯闪烁
+ 188   3                  sec_dx=set_timedx;          //重赋东西方向的起始值
+ 189   3                  sec_nb=set_timenb+5;                        //重赋南北方向的起始值
+ 190   3              }
+ 191   2          }
+ 192   1      }
+ 193          
+ 194          /*用来处理夜间黄灯闪烁*/
+ 195          void time1(void) interrupt 3                    //定时中断子程序
+ 196          {
+ 197   1          TH1=0x4C;                                                   //重赋初值;11.0592m晶振50ms
+ 198   1          TL1=0X00;
+ 199   1          countt1++;                                                  //计数器数加1（用于计算时间）
+ 200   1          if(countt1==10)                                         //定时器中断次数=10时（即0.5秒）
+ 201   1              {          
+ 202   2                      if(flag_Night==1)
+ 203   2                  {
+ 204   3                              Yellow_nb=~Yellow_nb;           //南北黄灯
+ 205   3                              Yellow_dx=~Yellow_nb;           //东西黄灯   
+ 206   3                      }       
+ 207   2              } 
+ 208   1          if(countt1==20)                             //定时器中断次数=20时（即1秒时）
+ 209   1          {
+ 210   2              countt1=0;                                              //清零计数器
+ 211   2              if(flag_Night==1)
+ 212   2              {
+ 213   3                  Yellow_nb=~Yellow_nb;               //南北黄灯
+ 214   3                  Yellow_dx=~Yellow_nb;               //东西黄灯
+ 215   3              }
+ 216   2          }
+ 217   1      }
+ 218          
+ 219          
+ 220          //外部中断0
+ 221          void int0(void) interrupt 0 using 1         //紧急模式
+ 222          {
+ 223   1          while(!key_EP)display();
+ 224   1          flag_option=1;
+ 225   1      }
+ 226          
+ 227          //外部中断1
+ 228          void int1(void) interrupt 2 using 1         //夜间模式
+ 229          {
+ 230   1          while(!key_night)display();
+ 231   1          flag_option=2;
+ 232   1      }
+ 233          
+ 234          /*初始化函数*/
+ 235          void init()
+ 236          {
+ 237   1          TMOD=0X11;                                                  //定时器设置
+ 238   1          TH1=0x4C;                                                   //TH1重赋初值;11.0592m晶振50ms
+ 239   1          TL1=0X00;
+ 240   1          TH0=0x4C;                                                   //TH0重赋初值;11.0592m晶振50ms
+ 241   1          TL0=0X00;
+C51 COMPILER V9.01   MAIN                                                                  06/17/2020 12:32:42 PAGE 5   
+
+ 242   1          TCON=0X50;                                                  //启动定时0、定时1
+ 243   1          IE=0x8F;                                                    //开总中断;定时器1中断开启;开外部中断1;定时器0中断开启;开外部中断
+ 244   1          P2=0Xc3;                                                    //开始默认状态，东西绿灯，南北黄灯
+ 245   1          sec_nb=35;                                                  //南北方向初始时间
+ 246   1          sec_dx=30;                                                  //东西方向初始时间
+ 247   1      }
+ 248          
+ 249          //主程序
+ 250          void main()
+ 251          {
+ 252   1          init();                                                             //初始化定时器、中断服务
+ 253   1          while(1)                                                    
+ 254   1          {
+ 255   2              if(flag_option!=0)function();   //调用功能函数
+ 256   2              display();                                              //调用显示函数
+ 257   2          }
+ 258   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    639    ----
+   CONSTANT SIZE    =     11    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     20    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
