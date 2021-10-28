@@ -1,10 +1,3 @@
-/*
-prj name: 简易交通灯设计
-coding	: gbk
-File    : mian.c
-Author  : MrSkYe
-Email   : skye231@foxmail.com
-*/
 #include <reg51.h>
 
 sbit Red_nb=P2^6;		                //南北红灯标志
