@@ -13,4 +13,4 @@
 关键词：AT89C51、C语言、交通灯
 # 仿真
 设计交通灯显示系统的硬件电路与软件程序，给出硬件系统的电路原理图与PCB图，对硬件电路与软件分别进行调试，得到调试成功的交通灯显示系统。
-![]()
+![](https://raw.githubusercontent.com/Jack-Dun/Traffic-Light-Display-System-Based-on-C51/main/%E4%BA%A4%E9%80%9A%E7%81%AF%E6%98%BE%E7%A4%BA%E7%B3%BB%E7%BB%9F%E7%94%B5%E8%B7%AF%E5%8E%9F%E7%90%86%E5%9B%BE%E9%A2%84%E8%A7%88.bmp)
